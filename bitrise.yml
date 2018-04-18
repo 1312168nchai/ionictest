@@ -1,0 +1,64 @@
+---
+format_version: '3'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: other
+workflows:
+  deploy:
+    steps:
+
+#    - script@1.1.4:
+#        run_if: .IsCI
+#        inputs:
+#        - content: envman add --key PATH --value ~/.local/bin:$PATH
+#        title: Add home bin to path
+
+    - script@1.1.4:
+        run_if: '{{getenv "CI" | eq "false"}}'
+        inputs:
+        - content: |
+            #!/bin/bash
+            envman add --key GIT_TAG --value "local-`date +'%Y-%m-%d-%H-%M-%S'`"
+        title: Set CI build tag
+    - script@1.1.4:
+        run_if: .IsCI
+        inputs:
+        - content: |
+            #!/bin/bash
+            envman add --key GIT_TAG --value "ci-$BITRISE_GIT_BRANCH-$BITRISE_BUILD_NUMBER"
+        title: Setting CI build tag
+    - script@1.1.4:
+        run_if: .IsCI
+        inputs:
+        - content: apt-get install nodejs
+        title: Install Node
+
+    - script@1.1.4:
+        title: Revert to NPM 5.2 because of prune bug
+        run_if: .IsCI
+        inputs:
+        - content: npm i -g npm@5.2
+
+    - script@1.1.4:
+        title: NPM Install
+        inputs:
+        - content: npm install
+
+    - script@1.1.4:
+        title: NPM run build
+        inputs:
+        - content: npm run build
+
+#    - deploy-to-bitrise-io:
+#        run_if: .IsCI
+#        is_always_run: true
+#        inputs:
+#        - deploy_path: "eslint.txt"
+
+    - script@1.1.4:
+        title: Echo Tag
+        inputs:
+        - content: echo $GIT_TAG
+
+    - git-tag@1.1.0:
+        inputs:
+        - tag: "$GIT_TAG"
